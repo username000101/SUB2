@@ -62,11 +62,18 @@ impl Sub2 for SUB2Service {
         
         let api_req = request.into_inner();
         let mut lock = CLIENT.lock();
-        let mut resp = lock.send(serde_json::from_str::<serde_json::Value>(api_req.request.as_str()).unwrap(), api_req.extra_field);
-        let result = SingleMessage {
-            message: resp.get_raw()
-        };
-        Ok(Response::new(result))
+        let req = serde_json::from_str::<serde_json::Value>(api_req.request.as_str());
+        match req {
+            Err(e) => {
+                let result = SingleMessage { message: format!("INVALID_REQUEST: {}", e.to_string()) };
+                Ok(Response::new(result))
+            },
+            Ok(val) => {
+                let mut resp = lock.send(val, api_req.extra_field);
+                let result = SingleMessage { message: resp.get_raw() };
+                Ok(Response::new(result))
+            }
+        }
     }
 }
 
