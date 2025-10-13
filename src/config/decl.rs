@@ -22,7 +22,7 @@ pub struct Configuration {
     pub directory: PathBuf,
     pub modules: Option<Vec<Module>>,
     #[serde(skip)]
-    pub process: Vec<std::process::Child>,
+    pub processes: Vec<std::process::Child>,
     pub blocked_requests: Option<Vec<String>>,
 }
 
@@ -39,7 +39,7 @@ pub static CONFIGURATION: Lazy<RwLock<Configuration>> = Lazy::new(|| {
             directory: PathBuf::new(),
             modules: None,
             panic_if_module_starting_error: Some(true),
-            process: Vec::new(),
+            processes: Vec::new(),
             blocked_requests: None,
         }
     )
