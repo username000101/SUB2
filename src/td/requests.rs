@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use tracing::{info, debug, warn};
+use tracing::warn;
 use serde_json::{json, Value};
 use std::path::PathBuf;
 use crate::sub2_get_version;

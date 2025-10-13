@@ -3,9 +3,7 @@ use parking_lot::RwLock;
 use once_cell::sync::Lazy;
 use serde_json::from_str;
 use crate::config::decl;
-use tracing::{debug, info, warn};
-use crate::config::decl::Module;
-use crate::config::interface::parse;
+use tracing::{debug, warn};
 
 pub fn parse_config(config: PathBuf) {
     if !config.exists() {

@@ -1,5 +1,5 @@
-use crate::{config, td, sub2_get_version};
-use tracing::{info, warn};
+use crate::{td, sub2_get_version};
+use tracing::info;
 use crate::auth;
 pub fn sub2_start_main_loop() {
     info!("Starting SUB2 v{}", sub2_get_version!()());

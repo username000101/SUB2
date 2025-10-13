@@ -1,4 +1,4 @@
-use {tracing, tracing_subscriber};
+use tracing_subscriber;
 use parking_lot::FairMutex;
 use std::sync::Arc;
 use tracing_subscriber::{filter::LevelFilter, reload, prelude::*};

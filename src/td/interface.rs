@@ -153,7 +153,7 @@ impl Client {
     }
 
     pub fn get_update(&mut self) -> String {
-        for i in [1, 2, 3, 4, 5] {
+        for _ in [1, 2, 3, 4, 5] {
             {
                 let mut lock = self.updates.lock();
                 if !lock.is_empty() {

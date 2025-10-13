@@ -4,8 +4,7 @@ use tonic::{
     Response,
     Status
 };
-use tonic::codec::SingleMessageCompressionOverride;
-use tracing::{info, debug, warn, error};
+use tracing::info;
 
 pub mod sub2_api {
     tonic::include_proto!("sub2_api");
@@ -32,7 +31,7 @@ impl Sub2 for SUB2Service {
         Ok(Response::new(result))
     }
 
-    async fn ping(&self, request: Request<EmptyRequestArgs>) -> Result<Response<SingleMessage>, Status> {
+    async fn ping(&self, _: Request<EmptyRequestArgs>) -> Result<Response<SingleMessage>, Status> {
         let result = SingleMessage {
             message: "PONG".to_string()
         };
@@ -47,7 +46,7 @@ impl Sub2 for SUB2Service {
         Ok(Response::new(result))
     }
 
-    async fn get_update(&self, request: Request<EmptyRequestArgs>) -> Result<Response<SingleMessage>, Status> {
+    async fn get_update(&self, _: Request<EmptyRequestArgs>) -> Result<Response<SingleMessage>, Status> {
         use crate::td::interface::CLIENT;
 
         let mut lock = CLIENT.lock();

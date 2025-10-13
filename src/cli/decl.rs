@@ -14,7 +14,7 @@ struct Args {
     spoof_version: Option<String>,
 }
 
-use tracing::{info, debug};
+use tracing::info;
 pub fn parse_cli_args() {
     let args = Args::parse();
 
