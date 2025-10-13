@@ -3,7 +3,7 @@ use parking_lot::RwLock;
 use once_cell::sync::Lazy;
 use serde_json::from_str;
 use crate::config::decl;
-use tracing::{debug, warn};
+use tracing::{debug, warn, info};
 
 pub fn parse_config(config: PathBuf) {
     if !config.exists() {
@@ -24,7 +24,11 @@ pub fn parse_config(config: PathBuf) {
     cfg.write().api_id = parse_result.api_id;
     cfg.write().api_hash = parse_result.api_hash;
     cfg.write().ready = true;
-    cfg.write().blocked_requests = parse_result.blocked_requests;
+    if !parse_result.blocked_requests.is_none() {
+        let breqs = parse_result.blocked_requests.unwrap();
+        info!("Running with these blocked requests:\n{:#?}", &breqs);
+        cfg.write().blocked_requests = Some(breqs);
+    }
     cfg.write().panic_if_module_starting_error = if parse_result.panic_if_module_starting_error.is_none() {
         cfg.read().panic_if_module_starting_error
     } else {
@@ -59,7 +63,7 @@ pub fn parse_config(config: PathBuf) {
                     .stderr(std::process::Stdio::inherit())
                     .spawn().unwrap();
             }
-            cfg.write().process.push(proc);
+            cfg.write().processes.push(proc);
         }
 
         cfg.write().modules = Some(modules);
