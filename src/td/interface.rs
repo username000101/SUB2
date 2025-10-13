@@ -9,7 +9,7 @@ use tracing::{debug, info, warn};
 
 #[derive(Clone)]
 pub struct ClientResponseRequest {
-    response: &'static CStr,
+    response: CString,
 }
 
 struct ClientPtrThreadWrapper {
@@ -27,8 +27,14 @@ unsafe impl Send for ClientPtrThreadWrapper {}
 impl ClientResponseRequest {
     pub fn new(response: *const c_char) -> ClientResponseRequest {
         unsafe {
-            ClientResponseRequest {
-                response: CStr::from_ptr(response),
+            if response.is_null() {
+                ClientResponseRequest { response: CString::new("").unwrap() }
+            } else {
+                let str = CStr::from_ptr(response);
+                let resp = str.to_owned();
+                ClientResponseRequest {
+                    response: resp,
+                }
             }
         }
     }
@@ -38,7 +44,7 @@ impl ClientResponseRequest {
     ) -> Result<T, Box<dyn std::error::Error>> {
         use serde_json::from_str;
         use std::any::type_name;
-
+        
         if self.response.is_empty() {
             Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
@@ -62,6 +68,10 @@ impl ClientResponseRequest {
     }
 
     pub fn get_type(&self) -> String {
+        if self.response.is_empty() {
+            return "".to_string();
+        }
+        
         let value: serde_json::Value =
             serde_json::from_str(self.response.to_str().unwrap()).unwrap();
         if let Some(val) = value.get("@type") {
@@ -78,10 +88,14 @@ impl ClientResponseRequest {
     }
     
     pub fn get_raw(&mut self) -> String {
+        if self.response.is_empty() { return "".to_string() }
+        
         String::from_str(self.response.to_str().unwrap()).unwrap()
     }
     
     pub fn get_field(&mut self, field: String) -> Option<Value> {
+        if self.response.is_empty() { return None }
+        
         let value: Value = serde_json::from_str(self.response.to_str().unwrap()).unwrap();
         if let Some(val) = value.get(field) {
             Some(val.clone())
@@ -91,6 +105,8 @@ impl ClientResponseRequest {
     }
 
     pub fn get_extra(&mut self) -> Option<String> {
+        if self.response.is_empty() { return None }
+        
         let value: serde_json::Value =
             serde_json::from_str(self.response.to_str().unwrap()).unwrap();
         if let Some(extra) = value.get("@extra") {
@@ -137,6 +153,16 @@ impl Client {
             return ClientResponseRequest::new(std::ptr::null());
         }
 
+        {
+            let cfg = CONFIGURATION.read();
+            let blocked_reqs = cfg.blocked_requests.clone().unwrap();
+            let type_ = request["@type"].as_str().unwrap().to_string();
+            if blocked_reqs.contains(&type_) {
+                warn!("Attempt to send blocked request: '{}'", type_);
+                return ClientResponseRequest::new(std::ptr::null());
+            }
+        }
+
         if request.to_string().is_empty() {
             warn!("Empty request");
             return ClientResponseRequest::new(std::ptr::null());
@@ -167,6 +193,7 @@ impl Client {
     }
 
     pub fn send(&mut self, mut request: Value, extra: String) -> ClientResponseRequest {
+        use crate::config::decl::CONFIGURATION;
         use std::thread::sleep;
         use std::time::Duration;
 
@@ -176,6 +203,16 @@ impl Client {
                 request.to_string()
             );
             return ClientResponseRequest::new(std::ptr::null());
+        }
+
+        {
+            let cfg = CONFIGURATION.read();
+            let blocked_reqs = cfg.blocked_requests.clone().unwrap();
+            let type_ = request["@type"].as_str().unwrap().to_string();
+            if blocked_reqs.contains(&type_) {
+                warn!("Attempt to send blocked request: '{}'", type_);
+                return ClientResponseRequest::new(std::ptr::null());
+            }
         }
 
         let result: ClientResponseRequest;
@@ -284,4 +321,6 @@ unsafe impl Send for Client {}
 unsafe impl Sync for Client {}
 
 use once_cell::sync::Lazy;
+use crate::config::decl::CONFIGURATION;
+
 pub static CLIENT: Lazy<FairMutex<Client>> = Lazy::new(|| FairMutex::new(Client::new()));
