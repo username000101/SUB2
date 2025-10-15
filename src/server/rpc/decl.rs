@@ -77,7 +77,7 @@ impl Sub2 for SUB2Service {
 }
 
 pub async fn sub2_start_rpc_server(port: u16) {
-    let addr = "[::1]:5000".parse().unwrap();
+    let addr = "127.0.0.1:5000".parse().unwrap();
     let svc = SUB2Service::default();
     
     info!("Starting RPC server on port {}", port);
