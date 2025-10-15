@@ -154,8 +154,11 @@ impl Client {
         }
 
         {
+            let mut blocked_reqs: Vec<String> = Vec::new();
             let cfg = CONFIGURATION.read();
-            let blocked_reqs = cfg.blocked_requests.clone().unwrap();
+            if !cfg.blocked_requests.is_none() {
+                blocked_reqs = cfg.blocked_requests.clone().unwrap();
+            }
             let type_ = request["@type"].as_str().unwrap().to_string();
             if blocked_reqs.contains(&type_) {
                 warn!("Attempt to send blocked request: '{}'", type_);
@@ -206,8 +209,11 @@ impl Client {
         }
 
         {
+            let mut blocked_reqs: Vec<String> = Vec::new();
             let cfg = CONFIGURATION.read();
-            let blocked_reqs = cfg.blocked_requests.clone().unwrap();
+            if !cfg.blocked_requests.is_none() {
+                blocked_reqs = cfg.blocked_requests.clone().unwrap();
+            }
             let type_ = request["@type"].as_str().unwrap().to_string();
             if blocked_reqs.contains(&type_) {
                 warn!("Attempt to send blocked request: '{}'", type_);
