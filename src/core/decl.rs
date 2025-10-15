@@ -1,6 +1,7 @@
 use crate::{td, sub2_get_version};
 use tracing::info;
 use crate::auth;
+use crate::config;
 pub fn sub2_start_main_loop() {
     info!("Starting SUB2 v{}", sub2_get_version!()());
 
@@ -11,6 +12,7 @@ pub fn sub2_start_main_loop() {
     }
     
     auth::decl::sub2_tdlib_auth();
+    config::interface::run_modules();
 
     info!("Nothing to do");
     loop {

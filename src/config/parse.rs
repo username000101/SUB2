@@ -38,34 +38,6 @@ pub fn parse_config(config: PathBuf) {
     if parse_result.modules.is_none() {
         warn!("Not found section 'modules'");
     } else {
-        let modules = parse_result.modules.unwrap();
-        for module in &modules {
-            if !module.file.exists() {
-                if cfg.read().panic_if_module_starting_error.unwrap() {
-                    panic!("Failed to load module '{}': file '{}' does not exist", module.id, module.file.display());
-                } else {
-                    warn!("Failed to load module '{}': file '{}' already exists", module.id, module.file.display());
-                }
-            }
-
-            debug!("Starting module '{}' aka '{}'", module.id, module.file.display());
-            let proc: std::process::Child;
-            if module.prefix.is_none() {
-                proc = std::process::Command::new(module.file.to_str().unwrap())
-                    .stdout(std::process::Stdio::inherit())
-                    .stderr(std::process::Stdio::inherit())
-                    .spawn().unwrap();
-            } else {
-                let prefix_opt = module.prefix.clone();
-                proc = std::process::Command::new(prefix_opt.unwrap())
-                    .arg(module.file.to_str().unwrap())
-                    .stdout(std::process::Stdio::inherit())
-                    .stderr(std::process::Stdio::inherit())
-                    .spawn().unwrap();
-            }
-            cfg.write().processes.push(proc);
-        }
-
-        cfg.write().modules = Some(modules);
+        cfg.write().modules = parse_result.modules;
     }
 }
