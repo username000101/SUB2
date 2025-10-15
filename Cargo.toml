@@ -1,9 +1,9 @@
 [package]
 name = "SUB2"
-version = "0.3.0"
+version = "0.5.0"
 edition = "2024"
 authors = ["username000101 cxx.username000101@gmail.com"]
-license = "BSD-3"
+license = "BSD-3-Clause"
 description = "Telegram userbot powered by Rust and tdjson"
 repository = "https://github.com/username000101/SUB2"
 keywords = []
