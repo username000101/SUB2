@@ -1,88 +1,53 @@
-use tonic::{
-    transport::Server,
-    Request,
-    Response,
-    Status
-};
+use mrpc_fixed::{RpcSender, Value};
 use tracing::info;
-
-pub mod sub2_api {
-    tonic::include_proto!("sub2_api");
-}
-
-use sub2_api::{
-    VersionResponse,
-    SingleMessage,
-    EmptyRequestArgs,
-    TdApiRequest,
-    sub2_server::{Sub2, Sub2Server}
-};
 use crate::sub2_get_version;
+use crate::td::interface::CLIENT;
 
-#[derive(Debug, Default)]
-pub struct SUB2Service {}
+#[derive(Clone, Default)]
+struct SUB2Service;
 
-#[tonic::async_trait]
-impl Sub2 for SUB2Service {
-    async fn version(&self, _req: Request<EmptyRequestArgs>) -> Result<Response<VersionResponse>, Status> {
-        let result = VersionResponse {
-            version: sub2_get_version!()()
-        };
-        Ok(Response::new(result))
-    }
-
-    async fn ping(&self, _: Request<EmptyRequestArgs>) -> Result<Response<SingleMessage>, Status> {
-        let result = SingleMessage {
-            message: "PONG".to_string()
-        };
-        Ok(Response::new(result))
-    }
-
-    async fn echo(&self, request: Request<SingleMessage>) -> Result<Response<SingleMessage>, Status> {
-        let msg = request.into_inner();
-        let result = SingleMessage {
-            message: msg.message
-        };
-        Ok(Response::new(result))
-    }
-
-    async fn get_update(&self, _: Request<EmptyRequestArgs>) -> Result<Response<SingleMessage>, Status> {
-        use crate::td::interface::CLIENT;
-
-        let mut lock = CLIENT.lock();
-        let result = SingleMessage {
-            message: lock.get_update()
-        };
-        Ok(Response::new(result))
-    }
-
-    async fn send_request(&self, request: Request<TdApiRequest>) -> Result<Response<SingleMessage>, Status> {
-        use crate::td::interface::CLIENT;
-        
-        let api_req = request.into_inner();
-        let mut lock = CLIENT.lock();
-        let req = serde_json::from_str::<serde_json::Value>(api_req.request.as_str());
-        match req {
-            Err(e) => {
-                let result = SingleMessage { message: format!("INVALID_REQUEST: {}", e.to_string()) };
-                Ok(Response::new(result))
+#[async_trait::async_trait]
+impl mrpc_fixed::Connection for SUB2Service {
+    async fn handle_request(&self, _client: RpcSender, method: &str, params: Vec<Value>) -> mrpc_fixed::Result<Value> {
+        match method {
+            "sub2.version" => Ok(sub2_get_version!()().into()),
+            "sub2.ping" => Ok("PONG".into()),
+            "sub2.echo" => {
+                if params.is_empty() {
+                    Ok("ERROR_TOO_FEW_ARGS".into())
+                } else {
+                    Ok(params[0].clone())
+                }
             },
-            Ok(val) => {
-                let mut resp = lock.send(val, api_req.extra_field);
-                let result = SingleMessage { message: resp.get_raw() };
-                Ok(Response::new(result))
-            }
+            "sub2.get_update" => {
+                let mut lock = CLIENT.lock();
+                let upd = lock.get_update();
+                Ok(upd.into())
+            },
+            "sub2.send_request" => {
+                if params.len() < 2 {
+                    return Ok("ERROR_TOO_FEW_ARGS".into());
+                }
+
+                if !params[0].is_str() || !params[1].is_str() {
+                    return Ok("ERROR_INVALID_ARGS".into());
+                }
+
+                let mut lock = CLIENT.lock();
+                let val = serde_json::from_str::<serde_json::Value>(params[0].as_str().unwrap());
+                if val.is_err() {
+                    return Ok("ERROR_SERDEJSON_FAILED".into());
+                }
+
+                let mut response = lock.send(val.unwrap(), params[1].as_str().unwrap().to_string());
+                Ok(response.get_raw().into())
+            },
+            &_ => Ok("ERROR_METHOD_NOT_FOUND".into()),
         }
     }
 }
-
 pub async fn sub2_start_rpc_server(port: u16) {
-    let addr = "127.0.0.1:5000".parse().unwrap();
-    let svc = SUB2Service::default();
-    
-    info!("Starting RPC server on port {}", port);
-    
-    Server::builder()
-        .add_service(Sub2Server::new(svc))
-        .serve(addr).await.unwrap();
+    let server = mrpc_fixed::Server::from_fn(SUB2Service::default).tcp(format!("127.0.0.1:{}", port.to_string()).as_str()).await.unwrap();
+    info!("RPC server listening on port {}", port);
+    server.run().await.expect("RPC server crashed");
 }
